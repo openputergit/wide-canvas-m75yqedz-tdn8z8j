@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Leave Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-['Inter']">
+
+<div class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-gray-800">Leave Management</h1>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="showForm()" class="text-gray-600 hover:text-gray-900">
+                        <i class="bi bi-plus-circle"></i> New Leave
+                    </button>
+                    <button onclick="showDashboard()" class="text-gray-600 hover:text-gray-900">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Leave Application Form -->
+    <div id="leaveForm" class="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+        <h2 class="text-2xl font-semibold mb-6">Leave Application</h2>
+        <form id="employeeLeaveForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Employee Name</label>
+                <input type="text" id="employeeName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">From Date</label>
+                    <input type="date" id="fromDate" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">To Date</label>
+                    <input type="date" id="toDate" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">From Time</label>
+                    <input type="time" id="fromTime" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">To Time</label>
+                    <input type="time" id="toTime" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Reason</label>
+                <textarea id="reason" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Submit Leave Request
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="max-w-7xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md hidden">
+        <h2 class="text-2xl font-semibold mb-6">Today's Leaves</h2>
+        <div id="leavesList" class="space-y-4">
+            <div class="animate-pulse" id="loadingState">
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Generate a persistent userId if not exists
+if (!localStorage.getItem('userId')) {
+    localStorage.setItem('userId', 'user_' + Math.random().toString(36).substr(2, 9));
+}
+
+const userId = localStorage.getItem('userId');
+const appSlug = 'employee-leave-app';
+
+// Show/Hide Functions
+function showForm() {
+    document.getElementById('leaveForm').classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+}
+
+function showDashboard() {
+    document.getElementById('leaveForm').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    fetchTodayLeaves();
+}
+
+// Form Submission
+document.getElementById('employeeLeaveForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const leaveData = {
+        employee_name: document.getElementById('employeeName').value,
+        from_date: document.getElementById('fromDate').value,
+        to_date: document.getElementById('toDate').value,
+        from_time: document.getElementById('fromTime').value,
+        to_time: document.getElementById('toTime').value,
+        reason: document.getElementById('reason').value
+    };
+
+    try {
+        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/db', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer JkehjpAkQAbUzgi9IyRzLhEak182',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                userId: userId,
+                appSlug: appSlug,
+                action: 'create',
+                table: 'employee_leaves',
+                data: leaveData
+            })
+        });
+
+        const result = await response.json();
+        if (!result.error) {
+            alert('Leave application submitted successfully!');
+            e.target.reset();
+            showDashboard();
+        } else {
+            alert('Error submitting leave application: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error submitting leave application: ' + error.message);
+    }
+});
+
+// Fetch Today's Leaves
+async function fetchTodayLeaves() {
+    const loadingState = document.getElementById('loadingState');
+    loadingState.style.display = 'block';
+    
+    try {
+        const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/db', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer JkehjpAkQAbUzgi9IyRzLhEak182',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                userId: userId,
+                appSlug: appSlug,
+                action: 'read',
+                table: 'employee_leaves'
+            })
+        });
+
+        const result = await response.json();
+        loadingState.style.display = 'none';
+        
+        if (!result.error) {
+            const leavesList = document.getElementById('leavesList');
+            leavesList.innerHTML = '';
+
+            // Filter for today's leaves
+            const today = new Date().toISOString().split('T')[0];
+            const todayLeaves = result.data.filter(leave => 
+                leave.data.from_date <= today && leave.data.to_date >= today
+            );
+
+            if (todayLeaves.length === 0) {
+                leavesList.innerHTML = '<p class="text-gray-500">No leaves for today</p>';
+                return;
+            }
+
+            todayLeaves.forEach(leave => {
+                const leaveCard = document.createElement('div');
+                leaveCard.className = 'p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow';
+                leaveCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold text-lg">${leave.data.employee_name}</h3>
+                            <p class="text-sm text-gray-600">
+                                ${leave.data.from_date} ${leave.data.from_time} to ${leave.data.to_date} ${leave.data.to_time}
+                            </p>
+                            <p class="text-sm text-gray-500 mt-2">${leave.data.reason || 'No reason provided'}</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            On Leave
+                        </span>
+                    </div>
+                `;
+                leavesList.appendChild(leaveCard);
+            });
+        } else {
+            document.getElementById('leavesList').innerHTML = `
+                <p class="text-red-500">Error loading leaves: ${result.error}</p>
+            `;
+        }
+    } catch (error) {
+        loadingState.style.display = 'none';
+        document.getElementById('leavesList').innerHTML = `
+            <p class="text-red-500">Error loading leaves: ${error.message}</p>
+        `;
+    }
+}
+
+// Initial load
+showForm();
+</script>
+
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
